@@ -16,7 +16,7 @@ module Monty
       end
 
       def seed= x
-        @seed = x && x.dup.freeze
+        @seed = x && x.to_s.dup.freeze
         reset!
       end
 
