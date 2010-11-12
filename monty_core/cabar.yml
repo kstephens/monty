@@ -15,6 +15,6 @@ cabar:
 
   requires:
     component:
-#      cnu_gems: true      # libxml, libxslt.
+
 
 
