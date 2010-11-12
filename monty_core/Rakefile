@@ -1,0 +1,9 @@
+
+task :default => :test
+
+task :test do
+  file = ENV['file'] || "test/ruby/**/*_spec.rb"
+  file = Dir[file]
+  sh "RUBYLIB=lib/ruby PATH=~/.gem/ruby/1.8/bin:$PATH spec -b #{file * " "}"
+end
+

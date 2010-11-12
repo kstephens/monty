@@ -1,0 +1,20 @@
+cabar:
+  version: v1.0
+
+  component:
+    name: monty_core
+    version: v1.0
+    description: 'Monty - Multivariate Content Core'
+
+  provides:
+    bin: false
+    action:
+      test: "rake test"
+    lib/ruby: lib/ruby
+    tests: test/ruby
+
+  requires:
+    component:
+#      cnu_gems: true      # libxml, libxslt.
+
+

@@ -1,0 +1,17 @@
+<html>
+  <head></head>
+  <body>
+    <!-- COMMENT 1 -->
+    <div id="0" attr="attr0">div0</div>
+
+    <div id="1" attr="attr1">div1</div>
+    <div id="2" attr="attr2">div2</div>
+    <div id="3" attr="attr3">div3</div>
+    <div id="4" attr="attr4">div4</div>
+    <div id="5" attr="attr5">div5</div>
+    <div id="6" attr="attr6">div6</div>
+
+    <div id="7" attr="attr7">div7</div>
+    <!-- COMMENT 2 -->
+  </body>
+</html>
