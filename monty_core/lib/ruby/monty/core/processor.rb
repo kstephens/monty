@@ -126,10 +126,10 @@ module Monty
         @before_process_input && @before_process_input.call(self)
 
         forced_possibilities = input.forced_possibilities(experiment_set)
-        _log { "  Forced possibilities #{forced_possibilities.map{|x| x.to_s}.inspect}" } if ! forced_possibilities.empty?
+        _log { "  Forced possibilities #{forced_possibilities.map{|x| x.to_s}.inspect}" } if @debug && ! forced_possibilities.empty?
 
         experiments = active_experiments
-        _log { "  Generating #{experiments.size} experiment parameter sets" }
+        _log { "  Generating #{experiments.size} experiment parameter sets" } if @debug
 
         experiments.each do | e |
           xsl = xsl_for_experiment e
@@ -139,7 +139,7 @@ module Monty
         end
 
         experiments = applicable_experiments
-        _log { "  Applying #{experiments.size} experiments" }
+        _log { "  Applying #{experiments.size} experiments" } if @debug
 
         # Start with the original input body document.
         result = input.body
@@ -159,14 +159,14 @@ module Monty
           end
 
           # Apply the Experiment's XSL and parameters to the input document.
-          _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" }
+          _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" } if @debug
 
           # Determine the Possibility that was selected from the Experiment.
           # Keep track of it in the Input object.
           p = e.possibility_for_params params
           if p
             input.applied_possibilities << p
-            _log { "Selected Experiment #{e.name.inspect} Possibility #{p.name.inspect} using #{param_0}" }
+            _log { "Selected Experiment #{e.name.inspect} Possibility #{p.name.inspect} using #{param_0}" } if @debug
           end
 
           if @debug
@@ -194,7 +194,7 @@ module Monty
               
               xsl = xsl_for_rule r
               
-              _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} Rule #{r.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" }
+              _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} Rule #{r.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" } if @debug
               
               xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
                                                             :document_type => input.document_type,

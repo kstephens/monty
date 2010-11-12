@@ -29,7 +29,7 @@ module Monty
 
       # Called from RailsSupport::*#*_with_monty_support.
       def process(input_stream)
-        _log { input.inspect }
+        _log { input.inspect } if @debug
 
         input_body = 
           case input_stream

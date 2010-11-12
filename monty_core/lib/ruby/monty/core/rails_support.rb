@@ -296,6 +296,7 @@ module Monty
 
         def log logger = nil
           return unless logger
+
           case 
           when logger.respond_to?(:info)
             logger.info { "Monty: #{self}" }
