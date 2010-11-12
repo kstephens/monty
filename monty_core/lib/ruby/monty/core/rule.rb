@@ -164,17 +164,14 @@ module Monty
           end
 
           def apply_to_dom_element! element, state
-            # Remove all children from this element.
-            element.children.dup.each do | c |
-              c.remove!
-            end
-
             # Compute new value.
-            old_value = element.content
             new_value = content
             new_value = new_value.data if new_value.respond_to? :data
             new_value = new_value.to_s
-            new_value = new_value.gsub(/\{\{\.\}\}/, old_value.to_s)
+            new_value = new_value.gsub(/\{\{\.\}\}/) do | m |
+              old_value ||= element.inner_xml
+              $stderr.puts "   #{self.name} old_value=#{old_value.inspect}"; old_value
+            end
 
             # Remove all children.
             element.each do | c |

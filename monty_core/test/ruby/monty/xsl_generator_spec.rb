@@ -150,7 +150,7 @@ END
     r1 = e.create_rule(:change_content,
                        :name => 'r1',
                        :path => "//title",
-                       :content => 'TITLE 1')
+                       :content => 'TITLE 1 (was {{.}})')
 
     r2 = e.create_rule(:change_content,
                        :name => 'r2',
@@ -194,45 +194,6 @@ END
   end
 
   ####################################################################
-
-  def process x, input_gen
-    result = nil
-    Benchmark.bm(40) do | bm |
-      [
-       false,
-       # true,
-      ].uniq.each do | use_xsl |
-      [ 
-       false, 
-       # use_xsl,
-      ].uniq.each do | use_experiment_xsl |
-      
-        @opts = opts = { :use_xsl => use_xsl, :use_experiment_xsl => use_experiment_xsl }
-        bm.report(@name = "#{x} #{opts.inspect}") do 
-          poss = p[x] || raise("unknown #{x.inspect}")
-
-          self.send(input_gen)
-
-          input.force_possibility! poss
-
-          p = Monty::Core::Processor.new({
-                                           :experiment_set => es, 
-                                           :input => input,
-                                           # :debug_xsl => true,
-                                         }.merge(opts))
-          p.logger = nil
-          p.process_input!
-          p.error.should == nil
-          result = p.input.body
-
-          input.applied_possibilities.should == [ poss ]
-
-          yield result
-        end
-      end; end
-    end
-    result
-  end
 
   it "should handle Possibility A1" do
     experiment_1!
@@ -356,7 +317,7 @@ END
   it "should handle Possiblity B2" do
     experiment_2!
     process(:B2, :input_2!) do | r |
-      cmp_diff r, @original_body.sub(%r{<title>.*?</title>}, "<title>TITLE 1</title>")
+      cmp_diff r, @original_body.sub(%r{<title>.*?</title>}, "<title>TITLE 1 (was TITLE 0)</title>")
     end
   end
 
@@ -369,6 +330,45 @@ END
 
 
   ####################################################################
+
+  def process x, input_gen
+    result = nil
+    Benchmark.bm(40) do | bm |
+      [
+       false,
+       # true,
+      ].uniq.each do | use_xsl |
+      [ 
+       false, 
+       # use_xsl,
+      ].uniq.each do | use_experiment_xsl |
+      
+        @opts = opts = { :use_xsl => use_xsl, :use_experiment_xsl => use_experiment_xsl }
+        bm.report(@name = "#{x} #{opts.inspect}") do 
+          poss = p[x] || raise("unknown #{x.inspect}")
+
+          self.send(input_gen)
+
+          input.force_possibility! poss
+
+          p = Monty::Core::Processor.new({
+                                           :experiment_set => es, 
+                                           :input => input,
+                                           # :debug_xsl => true,
+                                         }.merge(opts))
+          p.logger = nil
+          p.process_input!
+          p.error.should == nil
+          result = p.input.body
+
+          input.applied_possibilities.should == [ poss ]
+
+          yield result
+        end
+      end; end
+    end
+    result
+  end
 
 
   def cmp_diff a_in, b_in
