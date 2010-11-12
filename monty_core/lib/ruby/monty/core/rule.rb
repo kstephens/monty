@@ -97,14 +97,12 @@ module Monty
           end
 
           def apply_to_dom_element! element, state
-            # $stderr.puts "    #{self} element.path = #{element.path}"
             a_name = attribute_name.to_s
-            # $stderr.puts "    #{self} a_name = #{a_name.inspect}"
-            old_value = element[a_name]
-            # $stderr.puts "    #{self} old_value = #{old_value.inspect}"
+            old_value = nil
             new_value = attribute_value.to_s
-            new_value = new_value.gsub(/\{\{\.\}\}/, old_value.to_s)
-            # $stderr.puts "    #{self} new_value = #{new_value.inspect}"
+            new_value = new_value.gsub(/\{\{\.\}\}/) do | m |
+              old_value ||= element[a_name].to_s
+            end
             element[a_name] = new_value
           end
         end
