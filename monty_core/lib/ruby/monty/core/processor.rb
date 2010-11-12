@@ -39,7 +39,7 @@ module Monty
         @logger = $stderr
         @log_level = :debug
         @debug = true
-        @before_process_proc = @after_process_proc =
+        @before_process = @after_process =
         @before_process_input = @after_process_input = nil
         @error = nil
       end
@@ -231,7 +231,7 @@ module Monty
         input.applied_possibilities.sort!{| a, b | a.id <=> b.id }
         input.applied_possibilities.uniq! # probably not necessary.
 
-        @after_process_input_proc && @after_process_input_proc.call(self)
+        @after_process_input && @after_process_input.call(self)
       end
 
     end # class

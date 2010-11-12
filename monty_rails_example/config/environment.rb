@@ -82,11 +82,13 @@ begin
   $global_request_id = 0
   Monty::Core::Processor.configure do | p |
     p.debug = false
+
     p.before_process = lambda do | p |
       # $stderr.puts "   before_process"
       p.request.session[:request_id] = ($global_request_id += 1)
     end
 
+    # FIXME: remove _proc.
     p.input_setup_proc = lambda do | p |
       p.input.seeds[:request_id] = p.request.session[:request_id]
       p.input.website = "monty_rails_example"
