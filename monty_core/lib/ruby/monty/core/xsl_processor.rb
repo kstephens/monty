@@ -1,20 +1,16 @@
-gem 'libxslt-ruby'
-require 'xslt'
-
 require 'monty/core/sgml_entity'
+require 'monty/core/xml_parse'
 
 module Monty
   module Core
     # Interface to XSL Processor.
     class XslProcessor
       include Monty::Core::Options
+      include Monty::Core::XmlParse
 
       # The Xsl object.
       attr_accessor :xsl
       
-      # The input parsing mode: :html or :xml
-      attr_accessor :document_type
-
       # The SGML DOCTYPE: :xhtml_transitional, :xhtml_strict
       attr_accessor :sgml_doctype
 
@@ -161,38 +157,15 @@ END
         @xsltproc_stdout
       end
 
+=begin
       SGML_ENTITY_MAP = { 
         '&lt;' => '<', 
         '&gt;' => '>', 
         '&amp;' => '&',
       }.freeze.each { | k, v | k.freeze; v.freeze }
+=end
 
-      def _parse_input input
-        return input if XML::Document === input
-
-        case @document_type
-        when :html
-          parser_class = XML::HTMLParser
-        when :xml
-          parser_class = XML::Parser
-        else
-          raise ArgumentError, "@document_type: expected :html or :xml"
-        end
-
-        # $stderr.puts "input = #{input.inspect}"
-
-        parser = parser_class.string(input,
-                                     :options =>
-                                     XML::Parser::Options::RECOVER |
-                                     XML::Parser::Options::NONET |
-                                     XML::Parser::Options::PEDANTIC |
-                                     0)
-
-        input = parser.parse
-
-        input
-      end
-      private :_parse_input
+     private :_parse_input
 
     end # class
   end # module

@@ -1,11 +1,14 @@
+# TODO: Rename to xsl_generator_spec.rb
 require 'monty/core'
 require 'benchmark'
 
-describe "Monty::Core::XsltGenerator" do
-  attr_accessor :e, :input
+describe "Monty::Core::XslGenerator" do
+  attr_accessor :es, :e, :input
+  attr_accessor :p
 
   before(:each) do
     @xsl = nil
+    @p = { }
     generate_experiment!
   end
 
@@ -17,19 +20,24 @@ describe "Monty::Core::XsltGenerator" do
   end
 
   def generate_experiment!
-    e = Monty::Core::Experiment.new(:name => "Test 1")
+    self.es = Monty::Core::ExperimentSet.new
+    e = es.create_experiment(:name => File.basename(__FILE__))
     e.enabled = true
     e.uri_pattern = "http://test.com/test.html"
 
+    p[:A] = 
     a = e.create_possibility(:name => "A", 
                              :weight => 1)
     
+    p[:B] =
     b = e.create_possibility(:name => "B", 
                              :weight => 1)
     
+    p[:C] =
     c = e.create_possibility(:name => "C", 
                              :weight => 1)
     
+    p[:D] =
     d = e.create_possibility(:name => "D", 
                              :weight => 1)
 
@@ -109,8 +117,9 @@ describe "Monty::Core::XsltGenerator" do
 
     <div id="1" attr="attr1">div1</div>
     <div id="2" attr="attr2">div2</div>
-    <div id="3" attr="attr3">div4</div>
-    <div id="4" attr="attr4">div3</div>
+    <div id="3" attr="attr3">div3</div>
+    <div id="4" attr="attr4">div4</div>
+    <div id="5" attr="attr5">div5</div>
     <div id="6" attr="attr6">div6</div>
 
     <div id="7" attr="attr7">div7</div>
@@ -131,13 +140,29 @@ END
       gen = Monty::Core::XsltGenerator.new
       gen.output = @@xsl
       gen.generate e
-      if true
+      if false
         $stderr.puts "xsl======"
         $stderr.write @@xsl.data
         $stderr.puts "========="
       end
     end
     @@xsl
+  end
+  
+  def process x
+    result = nil
+    Benchmark.bm(40) do | bm |
+      bm.report(x.to_s) do 
+        poss = p[x] || raise("unknown #{x.inspect}")
+        input.force_possibility! poss
+        p = Monty::Core::Processor.new(:experiment_set => es, :input => input)
+        p.logger = nil
+        p.process_input!
+        p.error.should == nil
+        result = p.input.body
+      end
+    end
+    result
   end
 
   it "should generate xsl" do
@@ -171,27 +196,12 @@ END
   end
 
   it "should handle Possibility A" do
-    r = nil
-    
-    Benchmark.bm(40) do | bm |
-      bm.report("A") do 
-        r = xsl.processor.apply(input.body, { :param_1 => 0.1 })
-      end
-    end
-
+    r = process(:A)
     cmp_diff :A, r, @original_body
   end
 
   it "should handle Possiblity B" do
-    r = nil
-
-    Benchmark.bm(40) do | bm |
-      bm.report("B") do 
-        r = xsl.processor.apply(input.body, { :param_1 => 0.4 })
-      end
-      # $stderr.puts xsl.data
-    end
-
+    r = process(:B)
     cmp_diff :B, r, <<'END'
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
@@ -224,14 +234,7 @@ END
   end
 
   it "should handle Possibility C" do
-    r = nil
-    
-    Benchmark.bm(40) do | bm |
-      bm.report("C") do 
-        r = xsl.processor.apply(input.body, { :param_1 => 0.6 })
-      end
-    end
-
+    r = process(:C)
     cmp_diff :C, r, <<'END'
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
@@ -265,14 +268,7 @@ END
 
 
   it "should handle Possibility D" do
-    r = nil
-    
-    Benchmark.bm(40) do | bm |
-      bm.report("D") do 
-        r = xsl.processor.apply(input.body, { :param_1 => 0.8 })
-      end
-    end
-
+    r = process(:D)
     cmp_diff :D, r, <<'END'
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
@@ -294,9 +290,7 @@ END
     <div id="2" attr="attr2">div2</div>
     <div id="3" attr="attr3">div4</div>
     <div id="4" attr="attr4">div3</div>
-    <div id="6" attr="attr6" style="color: red;">div6</div>
-
-    <div id="7" attr="attr7">div7</div>
+    <div id="6" attr="attr6" style="color: red;">div6</div><div id="7" attr="attr7">div7</div>
     <!-- COMMENT 2 -->
   </body>
 </html>
