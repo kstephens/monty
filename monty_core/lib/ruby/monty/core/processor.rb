@@ -33,12 +33,17 @@ module Monty
       # If not false, output some debugging info.
       attr_accessor :debug
 
+      # If not false, output the xsl as its being applied.
+      attr_accessor :debug_xsl
+
+      attr_accessor :use_experiment_xsl
 
       def initialize_before_opts
         super
         @logger = $stderr
         @log_level = :debug
         @debug = false
+        @use_experiment_xsl = false
         @before_process = @after_process =
         @before_process_input = @after_process_input = nil
         @error = nil
@@ -77,7 +82,7 @@ module Monty
       def xsl_for_experiment e
         unless xsl = e.xsl
           xsl = Xslt.new
-          xg = XsltGenerator.new(:output => xsl)
+          xg = XsltGenerator.new(:output => xsl, :multi_rule => true)
           xg.generate(e)
           e.xsl = xsl
 
@@ -119,6 +124,8 @@ module Monty
       end
 
 
+      attr_reader :params, :e, :r
+
       # Subclasses should call this once input has been initialized.
       def process_input!
         input.applied_possibilities = [ ]
@@ -145,11 +152,12 @@ module Monty
         result = input.body
 
         experiments.each do | e |
+          @e = e
           # Get the cached XSL for the Experiment.
           xsl = xsl_for_experiment e
 
           # Generate parameters based on entropy_stream.
-          params = { }
+          @params = params = { }
           param_0 = nil # remember the first parameter.
           xsl.parameters.each do | param |
             if params[param]
@@ -177,37 +185,14 @@ module Monty
           end
 
           # Apply single Experiment XSL. 
-          if false
-            xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
-                                                          :document_type => input.document_type,
-                                                          :debug => @debug)
-            
-            result = xsl_processor.apply(result, params)
+          if @use_experiment_xsl
+            result = _apply_xsl result, xsl
           else
             e.rules.each do | r |
-              if @debug
-                File.open("/tmp/monty-#{e.name}-#{r.name}-input.txt", "w+") do | fh |
-                  fh.puts "params = #{params.inspect}"
-                  fh.write result.to_s
-                end
-              end
-              
+              @r = r
               xsl = xsl_for_rule r
               
-              _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} Rule #{r.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" } if @debug
-              
-              xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
-                                                            :document_type => input.document_type,
-                                                            :debug => @debug)
-              
-              result = xsl_processor.apply(result, params)
-              
-              if @debug
-                File.open("/tmp/monty-#{e.name}-#{r.name}-output.txt", "w+") do | fh |
-                  fh.write result.to_s
-                end
-              end
-              
+              result = _apply_xsl result, xsl
             end # rules
           end
           
@@ -232,6 +217,39 @@ module Monty
         input.applied_possibilities.uniq! # probably not necessary.
 
         @after_process_input && @after_process_input.call(self)
+      end
+
+
+      def _apply_xsl result, xsl
+        if @debug && @r
+          File.open("/tmp/monty-#{e.name}-#{r.name}-input.txt", "w+") do | fh |
+            fh.puts "params = #{params.inspect}"
+            fh.write result.to_s
+          end
+        end
+              
+        _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} #{r} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" } if @debug
+              
+        if @debug_xsl
+          $stderr.puts "params = #{params.inspect}"
+          $stderr.puts "xsl ==========\n#{xsl.data}\n=============="
+        end
+
+        xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
+                                                      :document_type => input.document_type,
+                                                      :debug => @debug)
+        
+        result = xsl_processor.apply(result, params)
+
+        if @debug && @r
+          File.open("/tmp/monty-#{e.name}-#{r.name}-output.txt", "w+") do | fh |
+            fh.puts "params = #{params.inspect}"
+            fh.write result.to_s
+          end
+        end
+              
+
+        result
       end
 
     end # class

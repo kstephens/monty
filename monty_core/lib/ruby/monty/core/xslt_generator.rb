@@ -22,12 +22,15 @@ module Monty
       # If true, enable debugging in the XSL.
       attr_accessor :debug
 
+      attr_accessor :multi_rule
+
       def initialize_before_opts
         super
         @is_identity = nil
         @debug = false
 
         @param_index = 0
+        @multi_rule = false
         @m_id = nil
         @output ||= $stdout
       end
@@ -107,8 +110,8 @@ This causes problems with Ruby libxslt.
 -->
 END
 
-        if false
-        out <<"END"
+        if multi_rule?
+          out <<"END"
   <!-- top-level template. -->
   <xsl:template match="node()">
     <xsl:copy>
@@ -117,9 +120,8 @@ END
     </xsl:copy>
   </xsl:template>
 END
-        end
-
-        out <<"END"
+        else
+          out <<"END"
   <!-- top-level template. -->
   <xsl:template match="node()">
     <xsl:copy>
@@ -128,6 +130,7 @@ END
     </xsl:copy>
   </xsl:template>
 END
+        end
 
         out <<"END"
   <xsl:template match="text() | comment() | processing-instruction()">
@@ -143,7 +146,7 @@ END
         out <<"END"
 <!-- footer -->
 END
-        if false
+        if multi_rule?
           out <<"END"
   <xsl:template match="@* | node()" mode="m#{@m_id}">
     <xsl:copy>
@@ -208,12 +211,18 @@ END
         obj.possibilities.each do | p |
           _generate p, opts
         end
-
-        (rules || obj.rules).each do | r |
+        
+        (@rules = rules || obj.rules).each do | r |
           _generate_rule r, opts
         end
       ensure
         @experiment = experiment_save
+      end
+
+
+      def multi_rule?
+        @multi_rule ||=
+          @rules && @rules.size > 1
       end
 
 
@@ -248,8 +257,17 @@ END
         out <<"END"
 
   <!-- Rule #{rule.name}: #{rule.to_s} -->
-  <xsl:template match="#{encode_path(path)}" ><!-- priority="2" mode="m#{m_id}" -->
 END
+        if multi_rule?
+          out <<"END"
+  <xsl:template match="#{encode_path(path)}" priority="2" mode="m#{m_id}" >
+END
+        else
+          out <<"END"
+  <xsl:template match="#{encode_path(path)}" >
+END
+        end
+
         @m_id += 1
 
         yield :header
@@ -294,11 +312,10 @@ END
 END
 
 
-        unless no_match_rest || true
+        if multi_rule? && ! no_match_rest
           out <<"END"
 
   <xsl:template match="node()" mode="m#{m_id}" priority="1">
-    [ node() m#{m_id} goto m#{@m_id} ]
     <xsl:copy>
       <xsl:copy-of select="@*" />
       <xsl:apply-templates mode="m#{@m_id}" />
@@ -406,26 +423,21 @@ END
 
 
       def _generate_copy rule
-        if false
+        if multi_rule?
           out <<"END"
-             [copy #{rule.name} goto m#{@m_id}]
-             <xsl:copy>
-                <xsl:copy-of select="@*" />
-                <xsl:apply-templates mode="m#{@m_id}" />
-             </xsl:copy>
+          <xsl:copy>
+             <xsl:copy-of select="@*" />
+             <xsl:apply-templates mode="m#{@m_id}" />
+          </xsl:copy>
 END
-        end
-        if false
+        else 
           out <<"END"
-            <xsl:copy-of select="." />
-END
-        end
-        out <<"END"
           <xsl:copy>
             <xsl:copy-of select="@*" />
             <xsl:apply-templates />
           </xsl:copy>
 END
+        end
       end
 
 
