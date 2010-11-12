@@ -95,6 +95,18 @@ module Monty
           def to_s
             "change the #{attribute_name} attribute of #{path} to #{attribute_value.inspect}"
           end
+
+          def apply_to_dom_element! element, state
+            # $stderr.puts "    #{self} element.path = #{element.path}"
+            a_name = attribute_name.to_s
+            # $stderr.puts "    #{self} a_name = #{a_name.inspect}"
+            old_value = element[a_name]
+            # $stderr.puts "    #{self} old_value = #{old_value.inspect}"
+            new_value = attribute_value.to_s
+            new_value = new_value.gsub(/\{\{\.\}\}/, old_value.to_s)
+            # $stderr.puts "    #{self} new_value = #{new_value.inspect}"
+            element[a_name] = new_value
+          end
         end
         include Behavior
       end
@@ -150,6 +162,30 @@ module Monty
           def to_s
             "change content of #{path}"
           end
+
+          def apply_to_dom_element! element, state
+            # Remove all children from this element.
+            element.children.dup.each do | c |
+              c.remove!
+            end
+
+            # Compute new value.
+            old_value = element.content
+            new_value = content
+            new_value = new_value.data if new_value.respond_to? :data
+            new_value = new_value.to_s
+            new_value = new_value.gsub(/\{\{\.\}\}/, old_value.to_s)
+
+            # Remove all children.
+            element.each do | c |
+              c.remove!
+            end
+
+            # Insert Raw HTML.
+            new_value = XML::Node.new_text(new_value)
+            new_value.output_escaping = false
+            element << new_value
+          end
         end
         include Behavior
       end
@@ -177,6 +213,38 @@ module Monty
           def to_s
             "swap content of #{path} with #{path_other}"
           end
+
+          def apply_to_dom_element! element, state
+            children =
+              state["self-#{self.object_id}"] ||= element.children.dup
+
+            # Remove our elements.
+            element.children.each do | c |
+              c.remove!
+            end
+
+            other_children = nil
+            others = element.doc.find(path_other.to_s)
+            others.each do | other |
+              other_children ||=
+                state["other-#{self.object_id}"] ||= other.children.dup
+
+              # Remove its children.
+              other.children.each do | c |
+                c.remove!
+              end
+
+              # Add the old children.
+              children.each do | c |
+                other << c.copy(true)
+              end
+            end
+
+            # Copy others into this element.
+            (other_children || EMPTY_ARRAY).each do | c |
+              element << c.copy(true)
+            end
+          end
         end
         include Behavior
       end
@@ -188,6 +256,12 @@ module Monty
         module Behavior
           def to_s
             "delete #{path}"
+          end
+
+          def apply_to_dom_element! element, state
+            #(state[:at_end] ||= [ ]) << lambda do | |
+              element.remove!
+            #end
           end
         end
         include Behavior

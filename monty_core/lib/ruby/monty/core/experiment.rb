@@ -200,6 +200,15 @@ module Monty
         end
 
 
+        def rules_for_possibility p
+          (@rules_for_possibility ||= { })[p.id] ||=
+            rules.
+            select { | r | self[p, r] }.
+            sort_by { | r | r.index }.
+            freeze
+        end
+
+
         # Returns true or false if a Rule is enabled for a particular Possibility.
         def [] pos, rule
           pos, rule = pos_rule_index pos, rule
@@ -218,6 +227,7 @@ module Monty
             rs.possibility = pos
           end
           rs.enabled = ! ! value
+          @rules_for_possibility = nil
           rs.save!
           
           rs

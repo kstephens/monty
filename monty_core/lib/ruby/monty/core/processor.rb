@@ -1,3 +1,6 @@
+require 'monty/core/sgml_html'
+require 'monty/core/xml_parse'
+
 module Monty
   module Core
     # Main Processor engine.
@@ -7,6 +10,8 @@ module Monty
       include Monty::Core::Options
       include Monty::Core::Log
       include Monty::Core::Config
+      include Monty::Core::XmlParse
+      include Monty::Core::SgmlHtml
 
       # The ExperimentSet used to determine the active and applicable Experiment objects.
       attr_accessor :experiment_set
@@ -36,13 +41,16 @@ module Monty
       # If not false, output the xsl as its being applied.
       attr_accessor :debug_xsl
 
-      attr_accessor :use_experiment_xsl
+      attr_accessor :use_xsl, :use_experiment_xsl
 
       def initialize_before_opts
         super
         @logger = $stderr
         @log_level = :debug
         @debug = false
+        @document_type = :html
+        @sgml_doctype = :xhtml_transitional
+        @use_xsl = false
         @use_experiment_xsl = false
         @before_process = @after_process =
         @before_process_input = @after_process_input = nil
@@ -138,6 +146,87 @@ module Monty
         experiments = active_experiments
         _log { "  Generating #{experiments.size} experiment parameter sets" } if @debug
 
+        if @use_xsl
+          result = process_input_xsl! experiments
+        else
+          result = process_input_dom! experiments
+        end
+
+        # Cleanup HTML for browser.
+        result = prepare_html_result result
+        result = prepend_sgml_doctype result
+        
+        # Replace the input body document with the last result.
+        result = result.string unless String === result
+        input.body = result
+        input
+
+      rescue Exception => err
+        $stderr.puts "#{self} #{err.inspect}\n#{err.backtrace * "\n"}"
+        @error = err
+        raise err
+
+      ensure
+        input.applied_possibilities.sort!{| a, b | a.id <=> b.id }
+        input.applied_possibilities.uniq! # probably not necessary.
+
+        @after_process_input && @after_process_input.call(self)
+      end
+
+      ################################################################
+      # DOM processing.
+      #
+
+      def process_input_dom! experiments
+        # Generate parameter values for all experiments.
+        experiments.each do | e |
+          input.generate_parameter_value! e, e.input_name
+        end
+
+        experiments = applicable_experiments
+        _log { "  Applying #{experiments.size} experiments" } if @debug
+
+        # Start with the original input body document.
+        result = input.body
+
+        # Parse result as XML DOM.
+        result = _parse_input result
+
+        experiments.each do | e |
+          param_0 = input.parameter_value(e, e.input_name)
+          if p = e.possibilities.find { | p | p.probability_range.include?(param_0) }
+            input.applied_possibilities << p
+            _log { "Selected Experiment #{e.name.inspect} Possibility #{p.name.inspect} using #{param_0}" } if @debug
+            state = { }
+            e.rules_for_possibility(p).each do | r |
+              result = apply_rule_to_dom! r, result, state
+            end
+            (state[:at_end] || EMPTY_ARRAY).each do | proc |
+              proc.call
+            end
+          end
+        end
+
+        result
+      end
+     
+
+      def apply_rule_to_dom! rule, result, state 
+        elements = result.find(rule.path.to_s)
+        elements.each do | element |
+          # $stderr.puts "\n  #{element.path} apply #{rule}"
+          rule.apply_to_dom_element! element, state
+          # $stderr.puts "\n  =>  #{element}"
+        end
+        result
+      end
+
+
+      ################################################################
+      # XSL version
+
+      def process_input_xsl! experiments
+        # Generate parameter values.
         experiments.each do | e |
           xsl = xsl_for_experiment e
           xsl.parameters.each do | param |
@@ -203,20 +292,7 @@ module Monty
           end
         end # next Experiment
 
-        # Replace the input body document with the last result.
-        result = result.string unless String === result
-        input.body = result
-        input
-
-      rescue Exception => err
-        @error = err
-        raise err
-
-      ensure
-        input.applied_possibilities.sort!{| a, b | a.id <=> b.id }
-        input.applied_possibilities.uniq! # probably not necessary.
-
-        @after_process_input && @after_process_input.call(self)
+        result
       end
 
 
@@ -247,7 +323,6 @@ module Monty
             fh.write result.to_s
           end
         end
-              
 
         result
       end
