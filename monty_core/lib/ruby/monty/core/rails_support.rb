@@ -93,37 +93,45 @@ module Monty
         
           # Monty is active, if it has Experiments that apply to this content.
           #
-          # If Monty is active, capture the output of the response into a String.
-          # Otherwise, just send the the response verbatim.
+          # If Monty is active, capture the response results.
+          # Otherwise, just return response results verbatim.
           #
           # Avoid applying Monty to the request more than once.
           capture_result = nil
-          if mp.is_active? && ! request.monty_applied
-            Timer.new(:monty_capture_output) do
-              capture_result = to_a_without_monty_support
-            end.log(mp.logger)
-          else
-            return to_a_without_monty_support
-          end
-
-          # [ status, headers, response_body ] ||
-          # response
-          status, headers, response_obj = capture_result
-          if false
-            $stderr.puts "input status  = #{status.class} #{status}"
-            $stderr.puts "input headers = #{headers.class} #{headers.inspect}"
-            $stderr.puts "input response_obj = #{response_obj.class}"
-          end
-
-          # Get a String rep of the Response body.
-          response_body = response_obj
-          response_body = response_body.body if ActionDispatch::Response === response_body
-          response_body = response_body.respond_to?(:join) ? response_body.join(EMPTY_STRING) : response_body
-          response_body = response_body.to_s
-
-          # Do not recur if Monty failed once.
-          request.monty_applied = true
+          Timer.new(:monty_capture_output) do
+            capture_result = to_a_without_monty_support
+          end.log(mp.logger)
           
+          use_monty = nil
+          Timer.new(:monty_check_applicability) do
+            use_monty = mp.is_active? && ! request.monty_applied
+          end.log(mp.logger)
+          if ! use_monty
+            return capture_result
+          end
+
+          status, headers, response_obj = capture_result
+          response_body = nil
+          Timer.new(:monty_collect_response_body) do
+            # [ status, headers, response_body ] ||
+            # response
+
+            if false
+              $stderr.puts "input status  = #{status.class} #{status}"
+              $stderr.puts "input headers = #{headers.class} #{headers.inspect}"
+              $stderr.puts "input response_obj = #{response_obj.class}"
+            end
+            
+            # Get a String rep of the Response body.
+            response_body = response_obj
+            response_body = response_body.body if ActionDispatch::Response === response_body
+            response_body = response_body.respond_to?(:join) ? response_body.join(EMPTY_STRING) : response_body
+            response_body = response_body.to_s
+            
+            # Do not recur if Monty failed once.
+            request.monty_applied = true
+          end
+
           # HTTP body has been captured in response_body.
           begin
             Timer.new(:monty_apply_experiments) do
@@ -150,12 +158,13 @@ module Monty
             end.log(mp.logger)
 
           rescue Exception => err
-            # If an error occurred, log and process the original output.
+            # If an error occurred, log and return the original output.
             STDERR.puts "ERROR: Monty: #{err.inspect}\n#{err.backtrace * "\n"}"
             headers[X_Monty_Error] = err.class.name.to_s
             
           ensure
-            applied_possibilities = (mp.input.applied_possibilities || EMPTY_ARRAY).map{|p| p.id}.join("_")
+            # Collect the applied Possibilities.
+            applied_possibilities = (mp.input.applied_possibilities || EMPTY_ARRAY).map{|p| p.id}.join(",")
             # Log the Possibilities in the Header.
             headers[X_Monty_Possibilities] = applied_possibilities
           end
@@ -194,7 +203,7 @@ module Monty
         end
 
         def out_with_monty_support output = $stdout
-          mp = Monty::Core::Rails12CgiProcessor.new(:request => self.request, :response => self)
+          mp = Monty::Core::Rails12Processor.new(:request => self.request, :response => self)
 
           # STDERR.puts "out_with_monty_support: input = #{mp.input.inspect}"
         
@@ -232,6 +241,7 @@ module Monty
               @body = http_body
 
             end.log(mp.logger)
+
           rescue Exception => err
             # If an error occurred, log and process the original output.
             STDERR.puts "ERROR: Monty: #{err.inspect}\n#{err.backtrace * "\n"}"
@@ -276,8 +286,10 @@ module Monty
             logger.info { "Monty: #{self}" }
           when logger.respond_to?(:puts)
             logger.puts "Monty: #{self}"
+          when logger.respond_to?(:call)
+            logger.call "Monty: #{self}"
           else
-            raise Error, "Cannot support logger of #{logger.class}"
+            raise Error, "Cannot support logger of class #{logger.class}"
           end
         end
       end

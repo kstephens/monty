@@ -1,3 +1,4 @@
+# TODO: Rename this file to rails_processor.rb
 require 'monty/core'
 
 require 'monty/core/processor'
@@ -26,7 +27,7 @@ module Monty
         @input
       end
 
-      # Called from RailsSupport::CgiResponseSupport#out_with_monty_support.
+      # Called from RailsSupport::*#*_with_monty_support.
       def process(input_stream)
         _log { input.inspect }
 
@@ -66,7 +67,7 @@ module Monty
     end
 
     # Support Monty hooks into Rails 1.2.
-    class Rails12CgiProcessor < RailsProcessor
+    class Rails12Processor < RailsProcessor
       # Rails 1.2 support for request.session.session_id
       def session_id
         @request.session.session_id
