@@ -46,9 +46,17 @@ begin
                      :css_class => "hello red"
                      )
  
-  p1 = e.create_possibility(:name => "A", :weight => 1)
+  r2 = e.create_rule(:change_class, :name => "r2",
+                     :path => "id('hello')",
+                     :css_class => "hello blue"
+                     )
+ 
+
+  p1 = e.create_possibility(:name => "A", :weight => 2)
   p2 = e.create_possibility(:name => "B", :weight => 1)
   e[p2, r1] = true
+  p3 = e.create_possibility(:name => "C", :weight => 1)
+  e[p3, r2] = true
 
 
   ####################################################################
