@@ -38,7 +38,7 @@ module Monty
         super
         @logger = $stderr
         @log_level = :debug
-        @debug = true
+        @debug = false
         @before_process = @after_process =
         @before_process_input = @after_process_input = nil
         @error = nil
@@ -100,7 +100,7 @@ module Monty
           xg.generate(e, [ r ])
           r.xsl = xsl
 
-          if @debug || true
+          if @debug # || true
             File.open("/tmp/monty-#{e.name}-#{r.name}.xsl", "w+") do | fh |
               fh.write xsl.data
             end
