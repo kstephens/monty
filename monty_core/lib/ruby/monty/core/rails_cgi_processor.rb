@@ -23,6 +23,7 @@ module Monty
                                    :content_type => response.content_type
                                  )
           @input_setup_proc && @input_setup_proc.call(self)
+          $stderr.puts "#{self} seeds = #{@input.seeds.inspect}"
         end
         @input
       end
@@ -62,7 +63,7 @@ module Monty
     class Rails3Processor < RailsProcessor
       # Rails 1.2 support for request.session[:id]
       def session_id
-        @request.session[:id]
+        @request.session_options[:id]
       end
     end
 
