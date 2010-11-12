@@ -10,6 +10,8 @@ class HomeController < ApplicationController
     #text << MontyRailsExample::Application.instance.app.class.inspect
 
     $stderr.puts("text ==========\n#{text * "\n"}\n=================")
+    
+    @times = 100
   end
 end
 

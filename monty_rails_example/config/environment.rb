@@ -61,7 +61,7 @@ begin
   ####################################################################
   # Debugging
   #
-  if true
+  if false
     $stderr.puts "Monty XSL ==============================="
     xsl = Monty::Core::Xsl.new
     gen = Monty::Core::XslGenerator.new(:output => xsl)
