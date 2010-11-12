@@ -4,8 +4,8 @@ require 'monty/core/processor'
 
 module Monty
   module Core
-    # Support Monty hooks into Rails.
-    class RailsCgiProcessor < Processor
+    # Support Monty hooks into Rails X request and response.
+    class RailsProcessor < Processor
       attr_accessor :request, :response
 
       include Monty::Core::Options
@@ -18,7 +18,7 @@ module Monty
             Monty::Core::Input.new(:uri => request.path,
                                    :referrer => request.env[HTTP_REFERER],
                                    :query_parameters => request.query_parameters,
-                                   :seeds => { :session_id => request.session.session_id },
+                                   :seeds => { :session_id => session_id },
                                    :content_type => response.content_type
                                  )
           @input_setup_proc && @input_setup_proc.call(self)
@@ -38,8 +38,10 @@ module Monty
             input_stream.string
           when String
             input_stream
+          when Array
+            input_stream.join(EMPTY_STRING)
           else
-            raise TypeError, "input_stream: expected IO, StringIO, or String, given #{input_stream.class}"
+            raise TypeError, "input_stream: expected IO, StringIO, String, or Array given #{input_stream.class}"
           end
         
         input.body = input_body
@@ -47,8 +49,27 @@ module Monty
         process_input!
 
         input.body
+
       rescue Exception => err
-        
+        @error = err
+        $stderr.puts "#{self} #{err.inspect}\n#{err.backtrace * "\n"}"
+        input.body
+      end
+    end # class
+
+    # Support Monty hooks into Rails 3.
+    class Rails3Processor < RailsProcessor
+      # Rails 1.2 support for request.session[:id]
+      def session_id
+        @request.session[:id]
+      end
+    end
+
+    # Support Monty hooks into Rails 1.2.
+    class Rails12CgiProcessor < RailsProcessor
+      # Rails 1.2 support for request.session.session_id
+      def session_id
+        @request.session.session_id
       end
     end
   end
