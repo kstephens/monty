@@ -47,7 +47,10 @@ module Monty
       # A set of Possibilities applied to the input, sorted by #id.
       attr_accessor :applied_possibilities
 
- 
+      # A set of forced Possibilities.
+      attr_accessor :forced_possibilities
+
+
       def initialize_before_opts
         super
         @now = nil
@@ -110,10 +113,10 @@ module Monty
           if fp = experiment.possibilities.find{|p| fp.find{|p_id| p.id == p_id } }
             r = fp.probability_range
             value = (r.first + r.last) * 0.5
-            # $stderr.puts "Forced Possibility #{fp.name} using value = #{value} in #{r.inspect}"
+            # $stderr.puts "  Forced Possibility #{fp.name} using value = #{value} in #{r.inspect}"
           else
             value = -1.0 # DO NOTHING!
-            # $stderr.puts "Forced Possibility disabled Experiment #{experiment.name} using value = #{value}"
+            # $stderr.puts "  Forced Possibility disabled Experiment #{experiment.name} using value = #{value}"
           end
         end
 
@@ -130,6 +133,15 @@ module Monty
           raise Monty::Core::Error, "parameter #{experiment.id} #{parameter.inspect} does not exist"
       end
 
+
+      def force_possibility! poss
+        if poss
+          @overridden = true
+          (@forced_possibilities ||= [ ]) << (Possibility ? poss.id : poss.to_i)
+          @forced_possibilities.uniq!
+        end
+        self
+      end
 
       # Returns an Array of Possibilities ids.
       # Can be specified using:
@@ -149,7 +161,7 @@ module Monty
             return @forced_possibilities = EMPTY_ARRAY
           end
           @overridden = true
-          x = x.split(',')
+          x = x.split(',') unless Array === x
           x.map! do | name |
             case name
             when /^\d+$/
