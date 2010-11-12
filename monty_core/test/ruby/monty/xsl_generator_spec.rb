@@ -36,6 +36,11 @@ describe "Monty::Core::XslGenerator" do
                        :path => "id('1')")
     r1.css_class = "class1"
 
+    r12 = e.create_rule(:change_class,
+                       :name => 'r12',
+                       :path => "id('2')")
+    r12.css_class = "{{.}} class2"
+
     r2 = e.create_rule(:change_content,
                        :name => 'r2',
                        :path => "//div[@id='2']")
@@ -63,6 +68,7 @@ describe "Monty::Core::XslGenerator" do
     e[a, r5] = false
 
     e[b, r1] = true
+    e[b, r12] = true
     e[b, r2] = true
     e[b, r3] = false
     e[b, r4] = false
@@ -110,7 +116,7 @@ describe "Monty::Core::XslGenerator" do
     <div id="0" attr="attr0">div0</div>
 
     <div id="1" attr="attr1">div1</div>
-    <div id="2" attr="attr2">div2</div>
+    <div id="2" class="attr2">div2</div>
     <div id="3" attr="attr3"><h3>div3</h3></div>
     <div id="4" attr="attr4"><h4>div4</h4></div>
     <div id="5" attr="attr5">div5</div>
@@ -223,7 +229,7 @@ END
     <div id="0" attr="attr0">div0</div>
 
     <div id="1" attr="attr1" class="class1">div1</div>
-    <div id="2" attr="attr2"><h1>NEW CONTENT</h1></div>
+    <div id="2" class="attr2 class2"><h1>NEW CONTENT</h1></div>
     <div id="3" attr="attr3"><h3>div3</h3></div>
     <div id="4" attr="attr4"><h4>div4</h4></div>
     <div id="5" attr="attr5">div5</div>
@@ -258,7 +264,7 @@ END
     <div id="0" attr="attr0">div0</div>
 
     <div id="1" attr="attr1">div1</div>
-    <div id="2" attr="attr2">div2</div>
+    <div id="2" class="attr2">div2</div>
     <div id="3" attr="attr3"><h4>div4</h4></div>
     <div id="4" attr="attr4"><h3>div3</h3></div>
     <div id="5" attr="attr5">div5</div>
@@ -294,7 +300,7 @@ END
     <div id="0" attr="attr0">div0</div>
 
     <div id="1" attr="attr1">div1</div>
-    <div id="2" attr="attr2">div2</div>
+    <div id="2" class="attr2">div2</div>
     <div id="3" attr="attr3"><h4>div4</h4></div>
     <div id="4" attr="attr4"><h3>div3</h3></div>
     <div id="6" attr="attr6" style="color: red;">div6</div><div id="7" attr="attr7">div7</div>
