@@ -318,7 +318,7 @@ END
           out <<"END"
         <xsl:copy>
           <xsl:copy-of select="@*[not(name()='#{rule.attribute_name}')]" />
-          <xsl:attribute name="#{rule.attribute_name}">#{rule.attribute_value}</xsl:attribute>
+          #{_generate_attribute_value rule}
           <xsl:apply-templates select="./node()" mode="m#{@m_id}" />
         </xsl:copy>
 END
@@ -333,6 +333,7 @@ END
           self.is_identity = false
           data = rule.content
           data = data.data unless String === data
+          data = _generate_copy_of(data, 'node() | text() | comment()')
           out <<"END"
         <xsl:copy>
            <xsl:copy-of select="@*" />#{data}</xsl:copy>
@@ -385,6 +386,22 @@ END
         when false
           _generate_copy rule
         end
+      end
+
+
+      def _generate_attribute_value rule
+        value = rule.attribute_value
+        value = _generate_value_of(value, "@#{rule.attribute_name}")
+        %Q{<xsl:attribute name="#{rule.attribute_name}">#{value}</xsl:attribute>}
+      end
+
+
+      def _generate_value_of value, expr
+        value.gsub(/\{\{\.\}\}/, %Q{<xsl:value-of select="#{expr}" />})
+      end
+
+      def _generate_copy_of value, expr
+        value.gsub(/\{\{\.\}\}/, %Q{<xsl:copy-of select="#{expr}" />})
       end
 
 

@@ -21,11 +21,11 @@ begin
 
   r1 = e.create_rule(:change_content, :name => "r1",
                      :path => "//title",
-                     :content => "TEST TITLE 1"
+                     :content => "TITLE 1"
                      )
   r2 = e.create_rule(:change_content, :name => "r2",
                      :path => "//title",
-                     :content => "TEST TITLE 2"
+                     :content => "TITLE 2 (was {{.}})"
                      )
 
   p1 = e.create_possibility(:name => "A", :weight => 1)
@@ -43,15 +43,14 @@ begin
 
   r1 = e.create_rule(:change_class, :name => "r1",
                      :path => "id('hello')",
-                     :css_class => "hello red"
+                     :css_class => "{{.}} red"
                      )
  
   r2 = e.create_rule(:change_class, :name => "r2",
                      :path => "id('hello')",
-                     :css_class => "hello blue"
+                     :css_class => "{{.}} blue"
                      )
  
-
   p1 = e.create_possibility(:name => "A", :weight => 2)
   p2 = e.create_possibility(:name => "B", :weight => 1)
   e[p2, r1] = true
