@@ -98,6 +98,8 @@ END
           result = xsltproc
         else
           # STDERR.puts "input =\n#{input}"
+          return input if input == EMPTY_STRING
+
           # Parse the DOM from the input stream.
           input = _parse_input(input)
 
@@ -176,6 +178,8 @@ END
         else
           raise ArgumentError, "@document_type: expected :html or :xml"
         end
+
+        # $stderr.puts "input = #{input.inspect}"
 
         parser = parser_class.string(input,
                                      :options =>
