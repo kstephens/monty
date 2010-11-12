@@ -79,15 +79,30 @@ module Monty
         def self.included target
           super
           target.class_eval do 
+            alias :process_without_monty_support :process unless method_defined? :process_without_monty_support
+            alias :process :process_with_monty_support
+
             alias :to_a_without_monty_support :to_a unless method_defined? :to_a_without_monty_support
             alias :to_a :to_a_with_monty_support
+          end
+        end
+
+        # The Monty::Core::Processor object.
+        attr_accessor :monty_processor
+
+        def process_with_monty_support action, *args
+          # $stderr.puts "#{self.class}#process_with_monty_support #{action.inspect}"
+          @monty_processor ||= Monty::Core::Rails3Processor.new(:request => @_request, :response => self)
+
+          @monty_processor.around_process! do 
+            process_without_monty_support(action, *args)
           end
         end
 
         def to_a_with_monty_support
           applied_possibilities = nil
           request = @_request
-          mp = Monty::Core::Rails3Processor.new(:request => request, :response => self)
+          mp = @monty_processor || (raise Error, "no @monty_processor")
 
           # STDERR.puts "to_a_with_monty_support: input = #{mp.input.inspect}"
         
