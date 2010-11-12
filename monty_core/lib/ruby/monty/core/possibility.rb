@@ -18,6 +18,10 @@ module Monty
       module Behavior
         attr_accessor :weight_range
 
+        def to_s
+          super.sub(/>$/, " #{experiment.name}::#{name} >")
+        end
+
         # Returns a Range for this Possibility within [0, Experiment#weight_sum).
         def weight_range
           experiment.compute_weight_ranges! unless @weight_range

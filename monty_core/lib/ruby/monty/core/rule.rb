@@ -21,6 +21,10 @@ module Monty
         # The cached Xslt generated in Processor.
         attr_accessor :xsl
 
+        def to_s
+          super.sub(/>$/, " #{name} >")
+        end
+
         # Sets the path XPath based on a String or Array.
         def path= x
           case x

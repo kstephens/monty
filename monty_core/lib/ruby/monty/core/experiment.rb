@@ -105,6 +105,10 @@ module Monty
         # Property: if this Experiment is applicable, matches the Input.referrer.
         attr_accessor :referrer_pattern
         
+        def to_s
+          super.sub(/>$/, " #{name} >")
+        end
+
         # Returns true if this Experiment and its ExperimentGroup are enabled.
         def enabled?
           self.enabled && (experiment_group ? experiment_group.enabled? : true)
