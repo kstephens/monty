@@ -75,6 +75,31 @@ module Monty
           xg = XsltGenerator.new(:output => xsl)
           xg.generate(e)
           e.xsl = xsl
+
+          if @debug
+            File.open("/tmp/#{e.name}.xsl", "w+") do | fh |
+              fh.write xsl.data
+            end
+          end
+        end
+        xsl
+      end
+
+      # Returns the cached XSL for a Rule.
+      def xsl_for_rule r
+        unless xsl = r.xsl
+          e = r.experiment
+
+          xsl = Xslt.new
+          xg = XsltGenerator.new(:output => xsl)
+          xg.generate(e, [ r ])
+          e.xsl = xsl
+
+          if @debug
+            File.open("/tmp/#{e.name}-#{r.name}.xsl", "w+") do | fh |
+              fh.write xsl.data
+            end
+          end
         end
         xsl
       end
@@ -136,11 +161,22 @@ module Monty
             end
           end
 
+          e.rules.each do | r |
+            xsl = xsl_for_rule r
+
           xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
                                                         :document_type => input.document_type,
                                                         :debug => @debug)
 
           result = xsl_processor.apply(result, params)
+
+          if @debug
+            File.open("/tmp/#{e.name}-#{r.name}-output.txt", "w+") do | fh |
+              fh.write result.to_s
+            end
+          end
+
+          end
 
           if @debug
             File.open("/tmp/#{e.name}-output.txt", "w+") do | fh |

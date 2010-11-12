@@ -2,6 +2,8 @@ module Monty
   module Core
     # Generates an XSL from an Experiment or ExperimentSet.
     #
+    # #input must be set if generating from an ExperimentSet.
+    #
     # FIXME: Rename XslGenerator.
     class XsltGenerator
       include Monty::Core::Options
@@ -11,6 +13,10 @@ module Monty
       # The output XSL document.
       attr_accessor :output
 
+      # The Input object, used for generate_ExperimentSet.
+      attr_accessor :input
+
+      # If true, the generated XSL does nothing to input.
       attr_accessor :is_identity
 
       # If true, enable debugging in the XSL.
@@ -22,6 +28,7 @@ module Monty
         @debug = false
 
         @param_index = 0
+        @m_id = nil
         @output ||= $stdout
       end
 
@@ -35,10 +42,11 @@ module Monty
       end
 
 
-      # Called with a ExperimentSet to generate the appropriate XSLT.
-      def generate obj
+      # Called with an Experiment or ExperimentSet to generate the appropriate XSLT.
+      def generate obj, *args
+        @m_id = nil
         _generate_header
-        _generate obj
+        _generate obj, *args
         _generate_footer
       end
 
@@ -84,7 +92,9 @@ END
       ####################################################################################
 
       def _generate_header
-        out <<'END'
+        @m_id ||= 1
+
+        out <<"END"
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	xmlns:exslt="http://exslt.org/common">
 
@@ -95,15 +105,33 @@ This causes problems with Ruby libxslt.
     doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN"
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
 -->
+END
 
-  <xsl:template match="@* | node()">
+        if false
+        out <<"END"
+  <!-- top-level template. -->
+  <xsl:template match="node()">
     <xsl:copy>
-      <xsl:apply-templates select="@* | node()" />
+      <xsl:copy-of select="@*" />
+      <xsl:apply-templates mode="m#{@m_id}" />
     </xsl:copy>
   </xsl:template>
+END
+        end
 
-  <xsl:template match="comment() | processing-instruction()">
-    <xsl:copy>.</xsl:copy>
+        out <<"END"
+  <!-- top-level template. -->
+  <xsl:template match="node()">
+    <xsl:copy>
+      <xsl:copy-of select="@*" />
+      <xsl:apply-templates />
+    </xsl:copy>
+  </xsl:template>
+END
+
+        out <<"END"
+  <xsl:template match="text() | comment() | processing-instruction()">
+    <xsl:copy-of select="." />
   </xsl:template>
 
 <!-- header END -->
@@ -112,9 +140,21 @@ END
       end
 
       def _generate_footer
-        out <<'END'
-
+        out <<"END"
 <!-- footer -->
+END
+        if false
+          out <<"END"
+  <xsl:template match="@* | node()" mode="m#{@m_id}">
+    <xsl:copy>
+      <xsl:apply-templates select="@*" mode="m#{@m_id}" />
+      <xsl:apply-templates mode="m#{@m_id}" />
+    </xsl:copy>
+  </xsl:template>
+END
+        end
+
+        out <<"END"
 </xsl:stylesheet>
 END
       end
@@ -134,7 +174,7 @@ END
         end
       end
 
-      def _generate_Experiment obj
+      def _generate_Experiment obj, rules = nil
         self.is_identity = true if @is_identity.nil?
         out <<"END"
   <!-- name   #{obj.name} -->
@@ -169,7 +209,7 @@ END
           _generate p, opts
         end
 
-        obj.rules.each do | r |
+        (rules || obj.rules).each do | r |
           _generate_rule r, opts
         end
       ensure
@@ -202,12 +242,16 @@ END
       end
 
 
-      def _generate_template path, rule, opts
+      def _generate_template path, rule, opts, no_match_rest = false
+        m_id = @m_id
+
         out <<"END"
 
   <!-- Rule #{rule.name}: #{rule.to_s} -->
-  <xsl:template match="#{encode_path(path)}">
+  <xsl:template match="#{encode_path(path)}" ><!-- priority="2" mode="m#{m_id}" -->
 END
+        @m_id += 1
+
         yield :header
 
         outln '    <xsl:choose>'
@@ -248,6 +292,23 @@ END
         out <<"END"
   </xsl:template>
 END
+
+
+        unless no_match_rest || true
+          out <<"END"
+
+  <xsl:template match="node()" mode="m#{m_id}" priority="1">
+    [ node() m#{m_id} goto m#{@m_id} ]
+    <xsl:copy>
+      <xsl:copy-of select="@*" />
+      <xsl:apply-templates mode="m#{@m_id}" />
+    </xsl:copy>
+  </xsl:template>
+  <xsl:template match="text() | comment() | processing-instruction()" mode="m#{m_id}" priority="0">
+    <xsl:copy-of select="." />
+  </xsl:template>
+END
+        end
       end
 
       def _generate_ChangeAttribute rule, opts, mode
@@ -258,11 +319,11 @@ END
         <xsl:copy>
           <xsl:copy-of select="@*[not(name()='#{rule.attribute_name}')]" />
           <xsl:attribute name="#{rule.attribute_name}">#{rule.attribute_value}</xsl:attribute>
-          <xsl:apply-templates select="./node()" />
+          <xsl:apply-templates select="./node()" mode="m#{@m_id}" />
         </xsl:copy>
 END
         when false
-          outln '        <xsl:copy-of select="." />'
+          _generate_copy rule
         end
       end
 
@@ -273,29 +334,32 @@ END
           data = rule.content
           data = data.data unless String === data
           out <<"END"
-        <xsl:copy><xsl:copy-of select="@*" />#{data}</xsl:copy>
+        <xsl:copy>
+           <xsl:copy-of select="@*" />#{data}</xsl:copy>
 END
         when false
-          outln '        <xsl:copy-of select="." />'
+          _generate_copy rule
         end
       end
 
       # See http://social.msdn.microsoft.com/Forums/en-SG/msxml/thread/0048f29d-9c9c-4f64-9791-aadbb4fd4711
       def _generate_SwapContent rule, opts, mode
-        _generate_template rule.path, rule, opts do | mode |
+        _generate_template rule.path, rule, opts, :no_match_rest do | mode |
           case mode
           when true
             self.is_identity = false
             out <<"END"
         <xsl:copy> 
-          <xsl:apply-templates select="@*" />
-          <xsl:apply-templates select="#{encode_path(rule.path_other)}/node()" />
+          <xsl:copy-of select="@*" />
+          <xsl:apply-templates select="#{encode_path(rule.path_other)}/node()" /><!-- mode="m#{@m_id}" -->
         </xsl:copy>
 END
           when false
-            outln '        <xsl:copy-of select="." />'
+            _generate_copy rule
           end
         end
+
+        @m_id -= 1
 
         _generate_template rule.path_other, rule, opts do | mode |
           case mode
@@ -303,12 +367,12 @@ END
             self.is_identity = false
             out <<"END"
         <xsl:copy> 
-          <xsl:apply-templates select="@*" />
-          <xsl:apply-templates select="#{encode_path(rule.path)}/node()" />
+          <xsl:copy-of select="@*" />
+          <xsl:apply-templates select="#{encode_path(rule.path)}/node()" /><!-- mode="m#{@m_id}" -->
         </xsl:copy>
 END
           when false
-            outln '        <xsl:copy-of select="." />'
+            _generate_copy rule
           end
         end
       end
@@ -317,10 +381,34 @@ END
         case mode
         when true
           self.is_identity = false
-          outln '        <!-- DELETED -->'
+          outln "        <!-- DELETED -->"
         when false
-          outln '        <xsl:copy-of select="." />'
+          _generate_copy rule
         end
+      end
+
+
+      def _generate_copy rule
+        if false
+          out <<"END"
+             [copy #{rule.name} goto m#{@m_id}]
+             <xsl:copy>
+                <xsl:copy-of select="@*" />
+                <xsl:apply-templates mode="m#{@m_id}" />
+             </xsl:copy>
+END
+        end
+        if false
+          out <<"END"
+            <xsl:copy-of select="." />
+END
+        end
+        out <<"END"
+          <xsl:copy>
+            <xsl:copy-of select="@*" />
+            <xsl:apply-templates />
+          </xsl:copy>
+END
       end
 
 
@@ -377,10 +465,12 @@ END
       end
 
     end # class
+
+    XslGenerator = XsltGenerator # FIXME
   end # module
 end # module
 
-
+# FIXME: This is ugly!
 class Object
   alias :id :object_id
 end

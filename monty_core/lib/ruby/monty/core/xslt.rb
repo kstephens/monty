@@ -77,6 +77,7 @@ END
         FOOTER
       end
     end # class
+    Xsl = Xslt # FIXME
   end # module
 end # module
 

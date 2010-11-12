@@ -172,7 +172,7 @@ module Monty
           # Append Possibilities to ETags to prevent cache fusion.
           if etag = headers["ETag"]
             # Handle annoying pre-escaped, pre-quoted header values.
-            headers["ETag"] = etag.sub(/(")\Z|\Z/) { | m | '-M' + applied_possibilities + $1 }
+            headers["ETag"] = etag.sub(/("?)\Z/) { | m | '-M' + applied_possibilities + $1 }
           end
 
           # Return result.

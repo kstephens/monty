@@ -50,12 +50,39 @@ begin
   p2 = e.create_possibility(:name => "B", :weight => 1)
   e[p2, r1] = true
 
+
+  ####################################################################
+  # Debugging
+  #
+  if true
+    $stderr.puts "Monty XSL ==============================="
+    xsl = Monty::Core::Xsl.new
+    gen = Monty::Core::XslGenerator.new(:output => xsl)
+    input = gen.input = Monty::Core::Input.new
+    input.uri = '/'
+    input.seeds[:request_id] = 0
+    $stderr.puts "Experiments = #{es.experiments.map{|x| x.name}.inspect}"
+    $stderr.puts "Applicable Experiments = #{es.applicable_experiments(input).map{|x| x.name}.inspect}"
+    gen.generate(es)
+    $stderr.write xsl.data
+    $stderr.puts "========= ==============================="
+    p = Monty::Core::XslProcessor.new(:xsl => xsl)
+    errors = p.validate_xsl
+    $stderr.puts "Errors = #{errors.inspect}"
+  end
+
+  ####################################################################
+  # Hooks
+  #
+
   es.class.get_proc = lambda do ||
     es
   end
 
   $global_request_id = 0
   Monty::Core::Processor.configure do | p |
+    p.debug = true
+
     p.input_setup_proc = lambda do | p |
       p.input.seeds[:request_id] = ($global_request_id += 1)
       p.input.website = "monty_rails_example"
@@ -67,7 +94,7 @@ begin
     p.after_process_input = lambda do | p |
       ps = p.input.applied_possibilities
       ps = ps.map{|pos| "#{pos.experiment.name}::#{pos.name}"} * ", "
-      $stderr.puts ps
+      $stderr.puts "  Monty Request: #{p.input.seeds[:request_id]}: #{p.request.url}: #{ps}"
     end
   end
 end

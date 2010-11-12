@@ -18,6 +18,9 @@ module Monty
         # Property
         attr_accessor :path
 
+        # The cached Xslt generated in Processor.
+        attr_accessor :xsl
+
         # Sets the path XPath based on a String or Array.
         def path= x
           case x
