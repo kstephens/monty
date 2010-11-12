@@ -89,7 +89,7 @@ module Monty
           request = @_request
           mp = Monty::Core::Rails3Processor.new(:request => request, :response => self)
 
-          STDERR.puts "to_a_with_monty_support: input = #{mp.input.inspect}"
+          # STDERR.puts "to_a_with_monty_support: input = #{mp.input.inspect}"
         
           # Monty is active, if it has Experiments that apply to this content.
           #
@@ -109,7 +109,7 @@ module Monty
           # [ status, headers, response_body ] ||
           # response
           status, headers, response_obj = capture_result
-          if true
+          if false
             $stderr.puts "input status  = #{status.class} #{status}"
             $stderr.puts "input headers = #{headers.class} #{headers.inspect}"
             $stderr.puts "input response_obj = #{response_obj.class}"
@@ -130,7 +130,7 @@ module Monty
               # Parse the HTTP header and body.
               http_body = response_body
               
-              if true
+              if false
                 $stderr.puts "http_body ================="
                 $stderr.puts http_body
                 $stderr.puts "==========================="
@@ -173,7 +173,7 @@ module Monty
             response_obj = [ response_body ]
           end
           
-          if true
+          if false
             $stderr.puts "output status  = #{status.class} #{status}"
             $stderr.puts "output headers = #{headers.class} #{headers.inspect}"
             $stderr.puts "output response_obj = #{response_obj.class}"
