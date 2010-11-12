@@ -1,0 +1,7 @@
+<% 
+  dom_id = 0
+  @text.each do | line |
+    dom_id += 1
+%>
+  <div id="text<%= dom_id %>"><%= h line %></div>
+<% end %>

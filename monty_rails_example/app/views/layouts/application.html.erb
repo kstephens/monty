@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MontyRailsExample</title>
+  <%= stylesheet_link_tag :all %>
+  <link href="/stylesheets/main.css" media="all" rel="stylesheet" type="text/css" />
+ <%= javascript_include_tag :defaults %>
+ <%= csrf_meta_tag %>
+</head>
+<body>
+
+  <div id="hello" class="hello">
+    Hello World!
+  </div>
+  
+<%= yield %>
+
+</body>
+</html>
