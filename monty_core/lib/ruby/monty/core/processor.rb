@@ -18,8 +18,12 @@ module Monty
       attr_accessor :input
 
       # A Proc to call after the Input object is created.
+      # FIXME: Remove _proc.
       attr_accessor :input_setup_proc
 
+      # A Proc to call before or after ActiveRecord::Base#process.
+      attr_accessor :before_process, :after_process, :process_result
+      
       # A Proc to call before or after #process_input!
       attr_accessor :before_process_input, :after_process_input
 
@@ -35,6 +39,7 @@ module Monty
         @logger = $stderr
         @log_level = :debug
         @debug = true
+        @before_process_proc = @after_process_proc =
         @before_process_input = @after_process_input = nil
         @error = nil
       end
@@ -77,7 +82,7 @@ module Monty
           e.xsl = xsl
 
           if @debug
-            File.open("/tmp/#{e.name}.xsl", "w+") do | fh |
+            File.open("/tmp/monty-#{e.name}.xsl", "w+") do | fh |
               fh.write xsl.data
             end
           end
@@ -93,15 +98,24 @@ module Monty
           xsl = Xslt.new
           xg = XsltGenerator.new(:output => xsl)
           xg.generate(e, [ r ])
-          e.xsl = xsl
+          r.xsl = xsl
 
-          if @debug
-            File.open("/tmp/#{e.name}-#{r.name}.xsl", "w+") do | fh |
+          if @debug || true
+            File.open("/tmp/monty-#{e.name}-#{r.name}.xsl", "w+") do | fh |
               fh.write xsl.data
             end
           end
         end
         xsl
+      end
+
+      # Called around ActiveRecord::Base#process.
+      # Invokes #before_process and #after_process Procs.
+      def around_process! 
+        (proc = @before_process) && proc.call(self)
+        @process_result = yield
+      ensure
+        (proc = @after_process) && proc.call(@self)
       end
 
 
@@ -112,7 +126,7 @@ module Monty
         @before_process_input && @before_process_input.call(self)
 
         forced_possibilities = input.forced_possibilities(experiment_set)
-        _log { "  Forced possibilities #{forced_possibilities.inspect}" } if ! forced_possibilities.empty?
+        _log { "  Forced possibilities #{forced_possibilities.map{|x| x.to_s}.inspect}" } if ! forced_possibilities.empty?
 
         experiments = active_experiments
         _log { "  Generating #{experiments.size} experiment parameter sets" }
@@ -141,7 +155,7 @@ module Monty
             if params[param]
               raise Monty::Core::Error, "param #{param.inspect} already computed!"
             end
-            param_0 ||= (params[param] = input.parameter_value e, param)
+            param_0 ||= (params[param] = input.parameter_value(e, param))
           end
 
           # Apply the Experiment's XSL and parameters to the input document.
@@ -156,30 +170,49 @@ module Monty
           end
 
           if @debug
-            File.open("/tmp/#{e.name}-input.txt", "w+") do | fh |
+            File.open("/tmp/monty-#{e.name}-input.txt", "w+") do | fh |
+              fh.puts "params = #{params.inspect}"
               fh.write result
             end
           end
 
-          e.rules.each do | r |
-            xsl = xsl_for_rule r
-
-          xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
-                                                        :document_type => input.document_type,
-                                                        :debug => @debug)
-
-          result = xsl_processor.apply(result, params)
-
-          if @debug
-            File.open("/tmp/#{e.name}-#{r.name}-output.txt", "w+") do | fh |
-              fh.write result.to_s
-            end
+          # Apply single Experiment XSL. 
+          if false
+            xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
+                                                          :document_type => input.document_type,
+                                                          :debug => @debug)
+            
+            result = xsl_processor.apply(result, params)
+          else
+            e.rules.each do | r |
+              if @debug
+                File.open("/tmp/monty-#{e.name}-#{r.name}-input.txt", "w+") do | fh |
+                  fh.puts "params = #{params.inspect}"
+                  fh.write result.to_s
+                end
+              end
+              
+              xsl = xsl_for_rule r
+              
+              _log { "  Applying #{e.class} #{e.priority} #{e.name.inspect} Rule #{r.name.inspect} as #{input.document_type} using input #{e.input_name.inspect} => #{input.seeds[e.input_name].inspect} with generated parameters #{params.inspect}" }
+              
+              xsl_processor = Monty::Core::XslProcessor.new(:xsl => xsl, 
+                                                            :document_type => input.document_type,
+                                                            :debug => @debug)
+              
+              result = xsl_processor.apply(result, params)
+              
+              if @debug
+                File.open("/tmp/monty-#{e.name}-#{r.name}-output.txt", "w+") do | fh |
+                  fh.write result.to_s
+                end
+              end
+              
+            end # rules
           end
-
-          end
-
+          
           if @debug
-            File.open("/tmp/#{e.name}-output.txt", "w+") do | fh |
+            File.open("/tmp/monty-#{e.name}-output.txt", "w+") do | fh |
               fh.write result.to_s
             end
           end
@@ -198,7 +231,7 @@ module Monty
         input.applied_possibilities.sort!{| a, b | a.id <=> b.id }
         input.applied_possibilities.uniq! # probably not necessary.
 
-        @after_process_input && @after_process_input.call(self)
+        @after_process_input_proc && @after_process_input_proc.call(self)
       end
 
     end # class
