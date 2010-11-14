@@ -97,6 +97,7 @@ END
           input = _parse_input(input)
 
           # Apply the XSL to the input w/ the parameters.
+          Core.load_libxslt!
           result_dom = xsl.stylesheet.apply(input, params)
 
           # STDERR.puts "result_dom = #{result_dom.inspect}" if @debug
@@ -110,7 +111,6 @@ END
         result
       end
       private :_process
-
 
       def xsltproc params = nil
         require "open3"

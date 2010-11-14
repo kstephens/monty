@@ -1,5 +1,3 @@
-gem 'libxslt-ruby'
-require 'xslt'
 
 module Monty
   module Core
@@ -11,6 +9,8 @@ module Monty
       # Parses input if not already an XML::Document.
       # Selectes parse dependent on @document_type.
       def _parse_input input
+        Core.load_libxml!
+
         case input
         when XML::Document
           return input

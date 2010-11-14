@@ -8,8 +8,51 @@ describe "Monty::Core::XslGenerator" do
   before(:each) do
     @p = { }
   end
+  after(:all) do
+    require 'pp'
+    pp $:
+    pp $".sort
+  end
 
-  def experiment_1!
+  def input_1
+    input = Monty::Core::Input.new
+    input.session_id = '1234'
+    input.uri = 'http://test.com/test.html'
+    input.body = <<"END"
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <script src="/javascripts/foo.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    // <![CDATA[
+    
+    SomeObject.Variable = true;
+    
+    // ]]>
+    </script>
+  </head>
+  <body>
+    <!-- COMMENT 1 -->
+    <div id="0" attr="attr0">div0</div>
+
+    <div id="1" attr="attr1">div1</div>
+    <div id="2" class="attr2">div2</div>
+    <div id="3" attr="attr3"><h3>div3</h3></div>
+    <div id="4" attr="attr4"><h4>div4</h4></div>
+    <div id="5" attr="attr5">div5</div>
+    <div id="6" attr="attr6">div6</div>
+
+    <div id="7" attr="attr7">div7</div>
+    <!-- COMMENT 2 -->
+  </body>
+</html>
+END
+    @original_body = input.body.dup.freeze
+
+    self.input = input
+  end
+
+  def experiment_1
     self.es = Monty::Core::ExperimentSet.new
     e = es.create_experiment(:name => File.basename(__FILE__))
     e.enabled = true
@@ -94,11 +137,54 @@ describe "Monty::Core::XslGenerator" do
     self.e = e
   end
 
-  def input_1!
-    input = Monty::Core::Input.new
-    input.session_id = '1234'
-    input.uri = 'http://test.com/test.html'
-    input.body = <<"END"
+  ####################################################################
+
+  it "should handle Possibility A1" do
+    experiment_1
+    process(:A1, :input_1) do | r |
+      cmp_diff r, @original_body
+    end
+  end
+
+  it "should handle Possiblity B1" do
+    experiment_1
+    process(:B1, :input_1) do | r |
+      cmp_diff r, <<'END'
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <script src="/javascripts/foo.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    // <![CDATA[
+    
+    SomeObject.Variable = true;
+    
+    // ]]>
+    </script>
+  </head>
+  <body>
+    <!-- COMMENT 1 -->
+    <div id="0" attr="attr0">div0</div>
+
+    <div id="1" attr="attr1" class="class1">div1</div>
+    <div id="2" class="attr2 class2"><h1>NEW CONTENT</h1></div>
+    <div id="3" attr="attr3"><h3>div3</h3></div>
+    <div id="4" attr="attr4"><h4>div4</h4></div>
+    <div id="5" attr="attr5">div5</div>
+    <div id="6" attr="attr6">div6</div>
+
+    <div id="7" attr="attr7">div7</div>
+    <!-- COMMENT 2 -->
+  </body>
+</html>
+END
+    end
+  end
+
+  it "should handle Possibility C1" do
+    experiment_1
+    process(:C1, :input_1) do | r |
+      cmp_diff r, <<'END'
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
   <head>
@@ -117,8 +203,8 @@ describe "Monty::Core::XslGenerator" do
 
     <div id="1" attr="attr1">div1</div>
     <div id="2" class="attr2">div2</div>
-    <div id="3" attr="attr3"><h3>div3</h3></div>
-    <div id="4" attr="attr4"><h4>div4</h4></div>
+    <div id="3" attr="attr3"><h4>div4</h4></div>
+    <div id="4" attr="attr4"><h3>div3</h3></div>
     <div id="5" attr="attr5">div5</div>
     <div id="6" attr="attr6">div6</div>
 
@@ -127,14 +213,65 @@ describe "Monty::Core::XslGenerator" do
   </body>
 </html>
 END
+    end
+  end
+
+
+  it "should handle Possibility D1" do
+    experiment_1
+    process(:D1, :input_1) do | r |
+      cmp_diff r, <<'END'
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <script src="/javascripts/foo.js" type="text/javascript"></script>
+    <script type="text/javascript">
+    // <![CDATA[
+    
+    SomeObject.Variable = true;
+    
+    // ]]>
+    </script>
+  </head>
+  <body>
+    <!-- COMMENT 1 -->
+    <div id="0" attr="attr0">div0</div>
+
+    <div id="1" attr="attr1">div1</div>
+    <div id="2" class="attr2">div2</div>
+    <div id="3" attr="attr3"><h4>div4</h4></div>
+    <div id="4" attr="attr4"><h3>div3</h3></div>
+    <div id="6" attr="attr6" style="color: red;">div6</div><div id="7" attr="attr7">div7</div>
+    <!-- COMMENT 2 -->
+  </body>
+</html>
+END
+    end
+  end
+
+  ####################################################################
+
+  def input_2
+    input = Monty::Core::Input.new
+    input.session_id = '1234'
+    input.uri = 'http://test.com/test.html'
+    input.body = <<"END"
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <title>TITLE 0</title>
+  </head>
+  <body>
+    <!-- COMMENT 1 -->
+  </body>
+</html>
+END
     @original_body = input.body.dup.freeze
 
     self.input = input
   end
 
-  ####################################################################
-
-  def experiment_2!
+  def experiment_2
     self.es = Monty::Core::ExperimentSet.new
     e = es.create_experiment(:name => File.basename(__FILE__))
     e.enabled = true
@@ -179,157 +316,26 @@ END
     self.e = e
   end
 
-  def input_2!
-    input = Monty::Core::Input.new
-    input.session_id = '1234'
-    input.uri = 'http://test.com/test.html'
-    input.body = <<"END"
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-  <head>
-    <title>TITLE 0</title>
-  </head>
-  <body>
-    <!-- COMMENT 1 -->
-  </body>
-</html>
-END
-    @original_body = input.body.dup.freeze
-
-    self.input = input
-  end
-
-  ####################################################################
-
-  it "should handle Possibility A1" do
-    experiment_1!
-    process(:A1, :input_1!) do | r |
-      cmp_diff r, @original_body
-    end
-  end
-
-  it "should handle Possiblity B1" do
-    experiment_1!
-    process(:B1, :input_1!) do | r |
-      cmp_diff r, <<'END'
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-  <head>
-    <script src="/javascripts/foo.js" type="text/javascript"></script>
-    <script type="text/javascript">
-    // <![CDATA[
-    
-    SomeObject.Variable = true;
-    
-    // ]]>
-    </script>
-  </head>
-  <body>
-    <!-- COMMENT 1 -->
-    <div id="0" attr="attr0">div0</div>
-
-    <div id="1" attr="attr1" class="class1">div1</div>
-    <div id="2" class="attr2 class2"><h1>NEW CONTENT</h1></div>
-    <div id="3" attr="attr3"><h3>div3</h3></div>
-    <div id="4" attr="attr4"><h4>div4</h4></div>
-    <div id="5" attr="attr5">div5</div>
-    <div id="6" attr="attr6">div6</div>
-
-    <div id="7" attr="attr7">div7</div>
-    <!-- COMMENT 2 -->
-  </body>
-</html>
-END
-    end
-  end
-
-  it "should handle Possibility C1" do
-    experiment_1!
-    process(:C1, :input_1!) do | r |
-      cmp_diff r, <<'END'
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-  <head>
-    <script src="/javascripts/foo.js" type="text/javascript"></script>
-    <script type="text/javascript">
-    // <![CDATA[
-    
-    SomeObject.Variable = true;
-    
-    // ]]>
-    </script>
-  </head>
-  <body>
-    <!-- COMMENT 1 -->
-    <div id="0" attr="attr0">div0</div>
-
-    <div id="1" attr="attr1">div1</div>
-    <div id="2" class="attr2">div2</div>
-    <div id="3" attr="attr3"><h4>div4</h4></div>
-    <div id="4" attr="attr4"><h3>div3</h3></div>
-    <div id="5" attr="attr5">div5</div>
-    <div id="6" attr="attr6">div6</div>
-
-    <div id="7" attr="attr7">div7</div>
-    <!-- COMMENT 2 -->
-  </body>
-</html>
-END
-    end
-  end
-
-
-  it "should handle Possibility D1" do
-    experiment_1!
-    process(:D1, :input_1!) do | r |
-      cmp_diff r, <<'END'
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html>
-  <head>
-    <script src="/javascripts/foo.js" type="text/javascript"></script>
-    <script type="text/javascript">
-    // <![CDATA[
-    
-    SomeObject.Variable = true;
-    
-    // ]]>
-    </script>
-  </head>
-  <body>
-    <!-- COMMENT 1 -->
-    <div id="0" attr="attr0">div0</div>
-
-    <div id="1" attr="attr1">div1</div>
-    <div id="2" class="attr2">div2</div>
-    <div id="3" attr="attr3"><h4>div4</h4></div>
-    <div id="4" attr="attr4"><h3>div3</h3></div>
-    <div id="6" attr="attr6" style="color: red;">div6</div><div id="7" attr="attr7">div7</div>
-    <!-- COMMENT 2 -->
-  </body>
-</html>
-END
-    end
-  end
 
   ####################################################################
 
   it "should handle Possibility A2" do
-    experiment_2!
-    process(:A2, :input_2!) do | r |
+    experiment_2
+    process(:A2, :input_2) do | r |
       cmp_diff r, @original_body
     end
   end
 
   it "should handle Possiblity B2" do
-    experiment_2!
-    process(:B2, :input_2!) do | r |
+    experiment_2
+    process(:B2, :input_2) do | r |
       cmp_diff r, @original_body.sub(%r{<title>.*?</title>}, "<title>TITLE 1 (was TITLE 0)</title>")
     end
   end
 
   it "should handle Possibility C2" do
-    experiment_2!
-    process(:C2, :input_2!) do | r |
+    experiment_2
+    process(:C2, :input_2) do | r |
       cmp_diff r, @original_body.sub(%r{<title>.*?</title>}, "<title>TITLE 2</title>")
     end
   end

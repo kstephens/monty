@@ -168,7 +168,6 @@ module Monty
             new_value = new_value.to_s
             new_value = new_value.gsub(/\{\{\.\}\}/) do | m |
               old_value ||= element.inner_xml
-              $stderr.puts "   #{self.name} old_value=#{old_value.inspect}"; old_value
             end
 
             # Remove all children.

@@ -5,6 +5,25 @@ module Monty
   #
   # Namespace for core classes and XSLT generation.
   module Core
+
+    @@load_libxml = nil
+    def self.load_libxml!
+      unless @@load_libxml 
+        gem 'libxml-ruby'
+        require 'xml'
+        @@load_libxml = true
+      end
+    end
+
+    @@load_libxslt = nil
+    def self.load_libxslt!
+      unless @@load_libxslt
+        load_libxml!
+        gem 'libxslt-ruby'
+        require 'xslt'
+        @@load_libxslt = true
+      end
+    end
   end
 end
 
