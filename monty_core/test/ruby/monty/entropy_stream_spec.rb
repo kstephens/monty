@@ -39,7 +39,6 @@ describe "Monty::Core::EntropyStream" do
     a1.should == [7424261, 519411, 6927, 288741, 4012195, 10033140, 6311811, 14329841, 12869772, 499657, 3843192]
   end
 
-
   it "should generate zeros if seed is nil" do
     s = create_stream(nil)
 

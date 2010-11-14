@@ -6,6 +6,7 @@ module Monty
     #
     # Uses RC4 stream cypher on zero bytes to generate 24-bit integers.
     #
+    # Generates 0 if seed is nil.
     class EntropyStream
       include Monty::Core::Options
 
