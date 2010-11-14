@@ -5,6 +5,7 @@ module Monty
     # Generates pseudo-random stream of Floats or Fixnums from a seed string.
     #
     # Uses RC4 stream cypher on zero bytes to generate 24-bit integers.
+    #
     class EntropyStream
       include Monty::Core::Options
 
@@ -34,12 +35,14 @@ module Monty
         NULL_CHAR = "\0".freeze
       end
       NULL_4 = (NULL_CHAR * 4).freeze
-      
+
+      # Generates Floats in [0.0, 1.0).
       def get_float
         get_int.to_f / RAW_FLT_MAX
       end
       alias :to_f :get_float
 
+      # Generates Integers in [0.0, RAW_INT_MAX).
       def get_int
         return 0 if @seed.nil?
         bytes = get_4_bytes

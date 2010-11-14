@@ -17,7 +17,7 @@ describe "Monty::Core::EntropyStream" do
     1000.times do 
       x = s.to_f
       x.should >= 0.0
-      x.should <= 1.0
+      x.should <  1.0
     end
   end
 
