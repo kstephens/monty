@@ -8,11 +8,6 @@ describe "Monty::Core::XslGenerator" do
   before(:each) do
     @p = { }
   end
-  after(:all) do
-    require 'pp'
-    pp $:
-    pp $".sort
-  end
 
   def input_1
     input = Monty::Core::Input.new
